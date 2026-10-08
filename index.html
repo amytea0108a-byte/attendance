@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>上下班打卡系統</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>上下班打卡</h1>
+    <p class="sub">ATTENDANCE TERMINAL</p>
+  </header>
+
+  <main class="container">
+    <!-- 員工與月份 -->
+    <section class="card toolbar">
+      <label class="inline">員工
+        <select id="empSelect"></select>
+      </label>
+      <button class="btn" id="btnEmp">管理員工</button>
+      <label class="inline">月份
+        <input type="month" id="monthPicker">
+      </label>
+    </section>
+
+    <!-- 今日打卡 -->
+    <section class="card today">
+      <div class="today-date" id="todayDate"></div>
+      <div class="today-clock" id="clock">--:--:--</div>
+      <div class="punch-buttons">
+        <button class="btn btn-primary" id="btnIn">上班打卡</button>
+        <button class="btn btn-accent" id="btnOut">下班打卡</button>
+      </div>
+      <div class="today-status" id="todayStatus"></div>
+    </section>
+
+    <!-- 薪資試算 -->
+    <section class="card">
+      <div class="card-head">
+        <h2 id="payTitle">本月薪資試算</h2>
+      </div>
+      <div class="row adj">
+        <label>全勤獎金（本月）
+          <input type="number" id="inBonus" min="0" step="100" placeholder="0">
+        </label>
+        <label>津貼（本月）
+          <input type="number" id="inAllow" min="0" step="100" placeholder="0">
+        </label>
+      </div>
+      <table class="table" id="payTable">
+        <tbody></tbody>
+      </table>
+      <div class="actions">
+        <button class="btn" id="btnSettings">薪資設定</button>
+        <button class="btn" id="btnPayCsv">匯出本月薪資 CSV（全部員工）</button>
+      </div>
+      <p class="hint">此為估算：月薪 ÷ 30 為日薪，月薪 ÷ 240 為時薪；週六日有上班的時數整段視為加班。勞健保以「管理員工」填的投保金額計算，尚未含所得稅、勞退自提、補充保費等。投保級距請依勞保局、健保署公告的分級表填寫。</p>
+    </section>
+
+    <!-- 假別統計 -->
+    <section class="card">
+      <div class="card-head">
+        <h2>假別使用統計</h2>
+        <label class="inline">年度
+          <select id="statYear"></select>
+        </label>
+      </div>
+      <table class="table" id="leaveStats">
+        <thead>
+          <tr><th>假別</th><th class="num">次數</th><th class="num">天數</th></tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot></tfoot>
+      </table>
+    </section>
+
+    <!-- 月紀錄 -->
+    <section class="card">
+      <div class="card-head">
+        <h2>打卡紀錄</h2>
+      </div>
+      <div class="table-wrap">
+        <table class="table" id="recordTable">
+          <thead>
+            <tr>
+              <th>日期</th><th>上班</th><th>下班</th><th class="num">工時</th><th>假別</th><th>備註</th><th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="empty" id="emptyMsg" hidden>這個月還沒有紀錄。</p>
+      <div class="actions">
+        <button class="btn" id="btnAdd">補登／請假</button>
+        <button class="btn" id="btnExport">匯出 CSV</button>
+      </div>
+      <p class="hint">資料只存在這個瀏覽器裡，換裝置或清除瀏覽器資料就會消失，建議定期匯出備份。</p>
+    </section>
+  </main>
+
+  <!-- 新增／編輯對話框 -->
+  <dialog id="editDialog">
+    <form method="dialog" id="editForm">
+      <h2 id="dialogTitle">補登／請假</h2>
+      <label>日期
+        <input type="date" id="fDate" required>
+      </label>
+      <div class="row">
+        <label>上班時間
+          <input type="time" id="fIn">
+        </label>
+        <label>下班時間
+          <input type="time" id="fOut">
+        </label>
+      </div>
+      <div class="row">
+        <label>假別
+          <select id="fLeave"></select>
+        </label>
+        <label>請假長度
+          <select id="fUnit">
+            <option value="1">全天</option>
+            <option value="0.5">半天</option>
+          </select>
+        </label>
+      </div>
+      <label>備註
+        <input type="text" id="fNote" maxlength="100" placeholder="選填">
+      </label>
+      <div class="dialog-actions">
+        <button type="button" class="btn" id="btnCancel">取消</button>
+        <button type="submit" class="btn btn-primary">儲存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 員工管理對話框 -->
+  <dialog id="empDialog">
+    <form method="dialog" id="empForm">
+      <h2>管理員工</h2>
+      <div id="empRows"></div>
+      <button type="button" class="btn" id="btnEmpAdd">＋ 新增員工</button>
+      <div class="dialog-actions">
+        <button type="button" class="btn" id="btnEmpCancel">取消</button>
+        <button type="submit" class="btn btn-primary">儲存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 薪資設定對話框 -->
+  <dialog id="setDialog">
+    <form method="dialog" id="setForm">
+      <h2>薪資設定</h2>
+      <label>午休扣除（分鐘，工時超過 5 小時才扣）
+        <input type="number" id="sLunch" min="0" max="180" step="5">
+      </label>
+      <h3>勞健保費率（%）</h3>
+      <div class="row">
+        <label>勞保＋就保合計費率
+          <input type="number" id="sLaborRate" min="0" max="100" step="0.01">
+        </label>
+        <label>勞工負擔比例
+          <input type="number" id="sLaborShare" min="0" max="100" step="1">
+        </label>
+      </div>
+      <div class="row">
+        <label>健保費率
+          <input type="number" id="sHealthRate" min="0" max="100" step="0.01">
+        </label>
+        <label>勞工自付比例
+          <input type="number" id="sHealthShare" min="0" max="100" step="1">
+        </label>
+      </div>
+      <h3>各假別給薪比例</h3>
+      <div id="rateRows"></div>
+      <div class="dialog-actions">
+        <button type="button" class="btn" id="btnSetCancel">取消</button>
+        <button type="submit" class="btn btn-primary">儲存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="script.js"></script>
+</body>
+</html>
